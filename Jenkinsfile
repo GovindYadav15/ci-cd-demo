@@ -1,18 +1,16 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18'
+        }
+    }
 
     environment {
         GIT_CREDS = 'git-creds'
-        REPO_URL = 'https://github.com/GovindYadav15/ci-cd-demo.git'
+        REPO = 'github.com/GovindYadav15/ci-cd-demo.git'
     }
 
     stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
 
         stage('Build') {
             steps {
@@ -28,14 +26,21 @@ pipeline {
 
         stage('Merge dev → stage') {
             steps {
-                script {
+                withCredentials([usernamePassword(
+                    credentialsId: "${GIT_CREDS}",
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS'
+                )]) {
                     sh '''
                     git config user.email "jenkins@demo.com"
                     git config user.name "Jenkins"
 
-                    git checkout stage
-                    git merge dev
-                    git push ${REPO_URL} stage
+                    git fetch origin
+
+                    git checkout -B stage origin/stage
+                    git merge origin/dev
+
+                    git push https://${GIT_USER}:${GIT_PASS}@${REPO} stage
                     '''
                 }
             }
@@ -49,18 +54,27 @@ pipeline {
 
         stage('Merge stage → prod') {
             steps {
-                sh '''
-                git checkout prod
-                git merge stage
-                git push ${REPO_URL} prod
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: "${GIT_CREDS}",
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS'
+                )]) {
+                    sh '''
+                    git fetch origin
+
+                    git checkout -B prod origin/prod
+                    git merge origin/stage
+
+                    git push https://${GIT_USER}:${GIT_PASS}@${REPO} prod
+                    '''
+                }
             }
         }
 
         stage('Start App (Prod Simulation)') {
             steps {
                 sh 'node app/server.js &'
-                sleep 5
+                sh 'sleep 5'
             }
         }
 
@@ -72,11 +86,20 @@ pipeline {
 
         stage('Merge prod → main') {
             steps {
-                sh '''
-                git checkout main
-                git merge prod
-                git push ${REPO_URL} main
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: "${GIT_CREDS}",
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS'
+                )]) {
+                    sh '''
+                    git fetch origin
+
+                    git checkout -B main origin/main
+                    git merge origin/prod
+
+                    git push https://${GIT_USER}:${GIT_PASS}@${REPO} main
+                    '''
+                }
             }
         }
     }
@@ -85,11 +108,20 @@ pipeline {
         failure {
             echo "Pipeline failed! Rolling back..."
 
-            sh '''
-            git checkout prod
-            git reset --hard HEAD~1
-            git push ${REPO_URL} prod --force
-            '''
+            withCredentials([usernamePassword(
+                credentialsId: "${GIT_CREDS}",
+                usernameVariable: 'GIT_USER',
+                passwordVariable: 'GIT_PASS'
+            )]) {
+                sh '''
+                git fetch origin
+
+                git checkout -B prod origin/prod
+                git reset --hard HEAD~1
+
+                git push https://${GIT_USER}:${GIT_PASS}@${REPO} prod --force
+                '''
+            }
         }
 
         success {
