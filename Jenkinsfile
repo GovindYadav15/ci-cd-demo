@@ -39,6 +39,7 @@ pipeline {
                     docker push ${IMAGE_NAME}:latest
                 '''
             }
+        }
         // stage('Trigger Stage Deploy') {
         //     when {
         //         branch 'stage'
@@ -74,7 +75,6 @@ pipeline {
                 '''
             }
         }
-    }
 
     }
 
