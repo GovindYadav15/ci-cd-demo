@@ -1,9 +1,9 @@
 FROM node:22-alpine
 
 WORKDIR /app
-COPY app/package*.json ./
+COPY app/package.json app/package-lock.json ./
 
-RUN npm ci --only=production || npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY app/. ./
 
