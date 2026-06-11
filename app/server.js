@@ -5,6 +5,7 @@ app.get("/", (req, res) => {
   res.json({ message: "CI/CD Demo App Running" });
 });
 
+console.log("Server initialized");
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
