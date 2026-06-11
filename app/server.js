@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+console.log('trigger build');
 
 app.get("/", (req, res) => {
   res.json({ message: "CI/CD Demo App Running" });
