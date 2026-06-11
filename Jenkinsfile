@@ -53,19 +53,26 @@ pipeline {
             }
         }
         stage('Deploy DEV (running as a container)') {
-    steps {
-        sh '''
-            docker run -d --name ci-cd-demo-dev -p 4173:3000 ${IMAGE_NAME}:latest
-        '''
-    }
-}
+            steps {
+                sh '''
+                    docker rm -f ci-cd-demo-dev || true
+                    docker run -d --name ci-cd-demo-dev -p 4173:3000 ${IMAGE_NAME}:latest
+                '''
+            }
+        }
         stage('Health Check') {
             steps {
                 sh '''
-                    sleep 5
-                    curl --fail http://localhost:4173
+                    for i in 1 2 3 4 5; do
+                        docker exec ci-cd-demo-dev node -e 'const http=require("http"); http.get("http://127.0.0.1:3000", res=>{ if (res.statusCode===200) process.exit(0); console.error("status", res.statusCode); process.exit(1); }).on("error", e=>{ console.error(e.message); process.exit(1); });' && exit 0
+                        echo "Waiting for app to become ready..."
+                        sleep 3
+                    done
+                    echo "Container logs:"
+                    docker logs ci-cd-demo-dev
+                    exit 1
                 '''
             }
-    }
+        }
     }
 }
