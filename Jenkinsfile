@@ -15,6 +15,21 @@ pipeline {
 
     stages {
 
+        stage('Debug: Agent and Workspace') {
+            steps {
+                sh '''
+                echo "[CI DEBUG] --- Debug Stage ---"
+                echo "[CI DEBUG] uname: $(uname -a || true)"
+                echo "[CI DEBUG] whoami: $(whoami || true)"
+                echo "[CI DEBUG] PATH: $PATH"
+                echo "[CI DEBUG] PWD: $(pwd)"
+                echo "[CI DEBUG] Listing workspace:"
+                ls -la || true
+                echo "[CI DEBUG] End Debug Stage"
+                '''
+            }
+        }
+
         stage('Guard: Dev Only and Checkout') {
             when {
                  branch 'dev' 
