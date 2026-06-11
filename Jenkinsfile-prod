@@ -23,8 +23,8 @@ pipeline {
         stage('Deploy PROD') {
             steps {
                 sh '''
-                    docker-compose -f docker-compose.prod.yml down || true
-                    docker-compose -f docker-compose.prod.yml up -d
+                    docker rm -f ci-cd-demo-prod || true
+                    docker run -d --name ci-cd-demo-prod -p 4173:3000 ${IMAGE_NAME}:${TAG}
                 '''
             }
         }
@@ -32,8 +32,14 @@ pipeline {
         stage('Health Check') {
             steps {
                 sh '''
-                    sleep 5
-                    curl --fail http://localhost:4173
+                    for i in 1 2 3 4 5; do
+                        docker exec ci-cd-demo-prod node -e 'const http=require("http"); http.get("http://127.0.0.1:3000", res=>{ if (res.statusCode===200) process.exit(0); process.exit(1); }).on("error", ()=>process.exit(1));' && exit 0
+                        echo "Waiting for app to become ready..."
+                        sleep 3
+                    done
+                    echo "Container logs:"
+                    docker logs ci-cd-demo-prod
+                    exit 1
                 '''
             }
         }

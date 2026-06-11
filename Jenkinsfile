@@ -49,6 +49,8 @@ pipeline {
                 sh '''
                     echo "Pushing ${IMAGE_NAME}:${TAG}"
                     docker push ${IMAGE_NAME}:${TAG}
+                    echo "Pushing ${IMAGE_NAME}:latest"
+                    docker push ${IMAGE_NAME}:latest
                 '''
             }
         }
