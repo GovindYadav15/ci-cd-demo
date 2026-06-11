@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'ci-cd-test'
-        CONTAINER_NAME = 'ci-cd-test-dev'
-        HOST_PORT = '3000'
+        CONTAINER_NAME = 'ci-cd-test-stage'
+        HOST_PORT = '3001'
         CONTAINER_PORT = '3000'
     }
 
