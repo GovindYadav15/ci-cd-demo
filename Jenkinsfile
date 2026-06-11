@@ -17,7 +17,7 @@ pipeline {
 
         stage('Guard: Dev Only and Checkout') {
             when {
-                { branch 'dev' }
+                 branch 'dev' 
             }
             steps {
                 checkout scm
