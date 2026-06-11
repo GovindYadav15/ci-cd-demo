@@ -3,90 +3,53 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'robert803556/ci-cd-test'
-        TAG = '${GIT_COMMIT}'
-        DOCKER_CREDENTIALS_ID = 'dockerhub-creds'
-        HOST_PORT = '3001'
-        CONTAINER_PORT = '3000'
-    }
-
-    options {
-        disableConcurrentBuilds()
-        timestamps()
     }
 
     stages {
-        stage('Checkout Code') {
+
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
+        stage('Set TAG (Git SHA)') {
+            steps {
+                script {
+                    env.TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sh '''
+                    docker build -t ${IMAGE_NAME}:${TAG} .
+                '''
+            }
+        }
+
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "${DOCKER_CREDENTIALS_ID}", 
-                    usernameVariable: 'DOCKER_USERNAME', 
-                    passwordVariable: 'DOCKER_PASSWORD')]) {
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
                     sh '''
-                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                        echo $PASS | docker login -u $USER --password-stdin
                     '''
                 }
             }
         }
-        stage('Push Docker Image') {
+
+        stage('Push Image') {
             steps {
                 sh '''
+                    echo "Pushing ${IMAGE_NAME}:${TAG}"
                     docker push ${IMAGE_NAME}:${TAG}
-                    docker push ${IMAGE_NAME}:latest
                 '''
             }
-        }
-        // stage('Trigger Stage Deploy') {
-        //     when {
-        //         branch 'stage'
-        //     }
-        //     steps {
-        //         build job: 'deploy-stage'
-        //     }
-        // }
-
-        // stage('Trigger Prod Deploy') {
-        //     when {
-        //         branch 'main' || branch 'prod'
-        //     }
-        //     steps {
-        //         build job: 'deploy-prod'
-        //     }
-        // }
-        
-        stage('Deploy DEV') {
-            steps {
-                sh '''
-                    docker-compose -f docker-compose.dev.yml down || true
-                    docker-compose -f docker-compose.dev.yml up -d
-                '''
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                sh '''
-                    sleep 5
-                    curl --fail http://localhost:4173
-                '''
-            }
-        }
-
-    }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully'
-        }
-        failure {
-            echo 'Pipeline failed'
-        }
-        always {
-            cleanWs()
         }
     }
 }
