@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  app:
+    image: ${IMAGE_NAME:-ci-cd-demo}:${TAG:-latest}
+    ports:
+      - "4175:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=staging
+    restart: unless-stopped

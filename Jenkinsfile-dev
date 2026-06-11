@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'robert803556/ci-cd-test'
+        TAG = 'latest'
+    }
+
+    stages {
+        stage('Pull Image') {
+            steps {
+                sh '''
+                    docker pull ${IMAGE_NAME}:${TAG}
+                '''
+            }
+        }
+
+        stage('Deploy DEV') {
+            steps {
+                sh '''
+                    docker-compose -f docker-compose.dev.yml down || true
+                    docker-compose -f docker-compose.dev.yml up -d
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                    sleep 5
+                    curl --fail http://localhost:4173
+                '''
+            }
+        }
+    }
+}
