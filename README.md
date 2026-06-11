@@ -1,202 +1,120 @@
-# CI/CD Demo Project (Jenkins Multi-Branch Pipeline)
+# CI/CD Demo Project
 
-This project demonstrates a **real-world CI/CD pipeline** using **Jenkins**, with:
+A simple end-to-end CI/CD demo using Jenkins and Docker.
 
-* Multi-branch Git workflow
-* Automated promotions across environments
-* QA gates (manual + automated)
-* Rollback strategy
-* Fully runnable locally
+This repository includes:
+
+* A Node.js Express app in `app/`
+* A Dockerfile for containerization
+* A Jenkins pipeline for build and deploy
+* A Docker Compose file for local testing
 
 ---
 
-## 🧱 Project Structure
+## Project Structure
 
-```
+```text
 ci-cd-demo/
-│
 ├── app/               # Node.js application
-├── test/              # Unit tests (Jest)
-├── Jenkinsfile        # CI/CD pipeline definition
+├── test/              # Tests (Jest)
+├── Dockerfile         # Docker image build
+├── Jenkinsfile        # Jenkins pipeline definition
+├── docker-compose.yml # Local Docker compose
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
-## Branch Strategy
+## Local Setup
 
-| Branch | Purpose                        |
-| ------ | ------------------------------ |
-| dev    | Development (trigger pipeline) |
-| stage  | QA / staging                   |
-| prod   | Production simulation          |
-| main   | Final stable release           |
+### 1. Clone repository
 
-### 🔄 Promotion Flow
-
-```
-dev → stage → prod → main
-```
-
----
-
-## ⚙️ Pipeline Flow
-
-1. **Push to `dev` triggers pipeline**
-2. Build & install dependencies
-3. Run unit tests
-4. Auto-merge `dev → stage`
-5. QA Gate (manual approval)
-6. Auto-merge `stage → prod`
-7. Run production smoke tests
-8. Auto-merge `prod → main`
-
----
-
-## 🧪 Tech Stack
-
-* Node.js (Express)
-* Jest (testing)
-* Jenkins (CI/CD)
-* Git (branching strategy)
-
----
-
-## Getting Started
-
-### 1. Clone Repo
-
-```
-git clone https://github.com/YOUR_USERNAME/ci-cd-demo.git
+```bash
+git clone https://github.com/GovindYadav15/ci-cd-demo.git
 cd ci-cd-demo
 ```
 
----
+### 2. Install dependencies
 
-### 2. Install Dependencies
-
-```
+```bash
+cd app
 npm install
 ```
 
----
+### 3. Run locally
 
-### 3. Run App Locally
-
-```
+```bash
 npm start
 ```
 
-App runs at:
+Open:
 
-```
+```text
 http://localhost:3000
 ```
 
----
+### 4. Run tests
 
-### 4. Run Tests
-
-```
+```bash
 npm test
 ```
 
 ---
 
-## 🏗️ Jenkins Setup
+## Docker
 
-### 1. Run Jenkins (Docker)
+### Build image
 
+```bash
+docker build -t ci-cd-demo .
 ```
-docker run -p 8080:8080 -p 50000:50000 jenkins/jenkins:lts
+
+### Run container
+
+```bash
+docker run -p 3000:3000 ci-cd-demo
+```
+
+### Local compose
+
+```bash
+docker-compose up --build
 ```
 
 ---
 
-### 2. Install Plugins
+## Jenkins Pipeline
 
-* Git
-* Pipeline
-* GitHub Integration
-* Credentials Binding
+The pipeline builds the Docker image and deploys it as a container on the Jenkins agent.
 
----
+### Recommended Jenkins job configuration
 
-### 3. Add Git Credentials
-
-* Go to: Manage Jenkins → Credentials
-* Add:
-
-  * Username/password OR SSH key
-  * ID: `git-creds`
-
----
-
-### 4. Create Pipeline Job
-
-* New Item → Pipeline
-* Select: **Pipeline script from SCM**
+* Create a Pipeline job
+* Set **Pipeline script from SCM**
 * SCM: Git
-* Branch: `*/dev`
+* Repository: `https://github.com/GovindYadav15/ci-cd-demo.git`
 * Script path: `Jenkinsfile`
 
 ---
 
-## 🔗 Webhook Setup (GitHub)
+## App Endpoints
 
-1. Go to Repo → Settings → Webhooks
-2. Add webhook:
-
-```
-http://<jenkins-url>/github-webhook/
-```
-
-3. Select:
-
-* Push events
+* `GET /` → returns a JSON status message
+* `GET /health` → returns `OK`
 
 ---
 
-## 🔁 Rollback Strategy
+## Notes
 
-If production fails:
-
-```
-git reset --hard HEAD~1
-git push --force
-```
+* The Docker build uses `npm ci` with the included `app/package-lock.json` for consistent dependency installs.
+* The Jenkins pipeline deploys the container and verifies the application with a health check.
 
 ---
 
-## 🔔 Optional Enhancements
+## License
 
-* Slack notifications
-* Docker build stage
-* Kubernetes deployment
-* SonarQube integration
-
----
-
-## ✅ Key Features
-
-✔ Fully automated CI/CD pipeline
-✔ Manual QA approval gate
-✔ Multi-branch promotion strategy
-✔ Production validation
-✔ Rollback support
-✔ Local setup (no cloud required)
-
----
-
-## 👨‍💻 Developer Workflow
-
-```
-git checkout dev
-git add .
-git commit -m "feature update"
-git push origin dev
-```
+MIT
 
 👉 Jenkins handles everything else automatically.
 
