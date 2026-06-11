@@ -55,8 +55,7 @@ pipeline {
         stage('Deploy DEV (running as a container)') {
     steps {
         sh '''
-            docker-compose -f docker-compose.dev.yml down || true
-docker-compose -f docker-compose.dev.yml up -d
+            docker run -d --name ci-cd-demo-dev -p 4173:3000 ${IMAGE_NAME}:latest
         '''
     }
 }
