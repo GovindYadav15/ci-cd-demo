@@ -1,0 +1,25 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'robert803556/ci-cd-test'
+        TAG = 'latest'
+    }
+
+    stages {
+        stage('Pull Image') {
+            steps {
+                sh 'docker pull ${IMAGE_NAME}:${TAG}'
+            }
+        }
+
+        stage('Deploy STAGE') {
+            steps {
+                sh '''
+                    docker-compose -f docker-compose.stage.yml down || true
+                    docker-compose -f docker-compose.stage.yml up -d
+                '''
+            }
+        }
+    }
+}
