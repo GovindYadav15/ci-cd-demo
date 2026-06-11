@@ -34,21 +34,22 @@ pipeline {
         }
 
         stage('Promote to stage') {
-            when {
-                branch 'dev'
-            }
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'git-creds', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
-                        sh '''
-                            git config user.name "jenkins"
-                            git config user.email "jenkins@ci.local"
-                            git fetch origin
-                            git checkout stage
-                            git pull origin stage
-                            git merge --no-ff dev -m "Promote dev to stage from build ${BUILD_NUMBER}"
-                            git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/GovindYadav15/ci-cd-demo.git stage
-                        '''
+                    def currentBranch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    if (currentBranch == 'dev' || currentBranch == 'origin/dev') {
+                        withCredentials([usernamePassword(credentialsId: 'git-creds', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                            sh '''
+                                git config user.name "jenkins"
+                                git config user.email "jenkins@ci.local"
+                                git fetch origin
+                                git checkout -B stage origin/stage
+                                git merge --no-ff origin/dev -m "Promote dev to stage from build ${BUILD_NUMBER}"
+                                git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/GovindYadav15/ci-cd-demo.git stage
+                            '''
+                        }
+                    } else {
+                        echo "Skipping promotion: current branch is ${currentBranch}"
                     }
                 }
             }
