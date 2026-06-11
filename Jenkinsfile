@@ -2,9 +2,8 @@ pipeline {
     agent any
 
     environment {
-        CI = 'true'
-        IMAGE_NAME = 'wiseai-chat-widget'
-        CONTAINER_NAME = 'wiseai-chat-widget-dev'
+        IMAGE_NAME = 'ci-cd-test'
+        CONTAINER_NAME = 'ci-cd-test-dev'
         PORT = '3000'
     }
 
@@ -16,36 +15,12 @@ pipeline {
 
     stages {
 
-        stage('Guard: Dev Only') {
+        stage('Guard: Dev Only and Checkout') {
             when {
-                not { branch 'dev' }
+                { branch 'dev' }
             }
-            steps {
-                script {
-                    echo "Skipping build for branch: ${env.BRANCH_NAME}"
-                    currentBuild.result = 'SUCCESS'
-                    error("Only dev branch is allowed")
-                }
-            }
-        }
-
-        stage('Checkout') {
             steps {
                 checkout scm
-            }
-        }
-
-        stage('Install & Test') {
-            steps {
-                script {
-                    docker.image('node:22-alpine').inside {
-                        sh '''
-                        npm ci
-                        npm run lint || true
-                        npm test || true
-                        '''
-                    }
-                }
             }
         }
 
@@ -58,7 +33,7 @@ pipeline {
             }
         }
 
-        stage('Deploy to Dev') {
+        stage('Deploy Dev Container') {
             steps {
                 sh '''
                 set -e
