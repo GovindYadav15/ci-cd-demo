@@ -1,178 +1,98 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18'
-        }
-    }
+    agent any
 
     environment {
-        GIT_CREDS = 'sdfhkjhf-343434'
-        REPO_URL  = 'https://github.com/GovindYadav15/ci-cd-demo.git'
+        CI = 'true'
+        IMAGE_NAME = 'wiseai-chat-widget'
+        CONTAINER_NAME = 'wiseai-chat-widget-dev'
+        PORT = '3000'
     }
 
     options {
-        timestamps()
+        ansiColor('xterm')
         disableConcurrentBuilds()
+        timestamps()
     }
 
     stages {
 
-        stage('Guard: Allow only dev CI execution') {
+        stage('Guard: Dev Only') {
             when {
-                not {
-                    branch 'dev'
-                }
+                not { branch 'dev' }
             }
             steps {
                 script {
-                    echo "Skipping pipeline for branch: ${env.BRANCH_NAME}"
+                    echo "Skipping build for branch: ${env.BRANCH_NAME}"
                     currentBuild.result = 'SUCCESS'
-                    error("Not dev branch - stopping CI execution")
+                    error("Only dev branch is allowed")
                 }
             }
         }
 
-        stage('Test') {
+        stage('Checkout') {
             steps {
-                sh 'chmod +x test.sh'
-                sh './test.sh'
+                checkout scm
             }
         }
 
-        stage('Promote Dev -> Stage') {
-            when {
-                branch 'dev'
-            }
-
+        stage('Install & Test') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: "${GIT_CREDS}",
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                        set -e
-
-                        git config user.email "jenkins@example.com"
-                        git config user.name "Jenkins"
-
-                        git fetch origin +refs/heads/*:refs/remotes/origin/*
-
-                        git reset --hard HEAD
-                        git clean -fd
-
-                        git checkout -B stage origin/stage
-                        git merge --ff-only origin/dev
-
-                        git push https://$GIT_USER:$GIT_PASS@github.com/GovindYadav15/ci-cd-demo.git stage
-
-                        echo "DEV → STAGE promotion done"
-                    '''
+                script {
+                    docker.image('node:22-alpine').inside {
+                        sh '''
+                        npm ci
+                        npm run lint || true
+                        npm test || true
+                        '''
+                    }
                 }
             }
         }
 
-        stage('Promote Stage -> Prod') {
-            when {
-                branch 'dev'   
-            }
-
-            input {
-                message "Approve STAGE → PROD promotion?"
-                ok "Approve"
-            }
-
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: "${GIT_CREDS}",
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                        set -e
-
-                        git fetch origin +refs/heads/*:refs/remotes/origin/*
-
-                        git checkout -B prod origin/prod
-                        git merge --ff-only origin/stage
-
-                        git push https://$GIT_USER:$GIT_PASS@github.com/GovindYadav15/ci-cd-demo.git prod
-
-                        echo "STAGE → PROD promotion done"
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy Production') {
-            when {
-                branch 'dev'
-            }
-
+        stage('Build Docker Image') {
             steps {
                 sh '''
-                    echo "Starting production simulation..."
-                    node app/server.js &
-                    sleep 5
-                    curl -f http://localhost:3000/health
+                docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
                 '''
             }
         }
 
-        stage('Sync Prod -> Main') {
-            when {
-                branch 'dev'
-            }
-
+        stage('Deploy to Dev') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: "${GIT_CREDS}",
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )
-                ]) {
+                sh '''
+                set -e
 
-                    sh '''
-                        set -e
+                echo "Stopping old container..."
+                docker rm -f ${CONTAINER_NAME} || true
 
-                        git fetch origin +refs/heads/*:refs/remotes/origin/*
+                echo "Starting new container..."
+                docker run -d \
+                    --name ${CONTAINER_NAME} \
+                    -p ${PORT}:${PORT} \
+                    ${IMAGE_NAME}:${BUILD_NUMBER}
 
-                        git checkout -B main origin/main
-                        git merge --ff-only origin/prod
+                echo "Waiting for app..."
+                sleep 5
 
-                        git push https://$GIT_USER:$GIT_PASS@github.com/GovindYadav15/ci-cd-demo.git main
+                echo "Running health check..."
+                curl --retry 5 --retry-delay 2 --fail http://localhost:${PORT}/health
 
-                        echo "PROD → MAIN sync done"
-                    '''
-                }
+                echo "Dev deployment successful!"
+                '''
             }
         }
     }
 
     post {
-
         success {
-            echo "Pipeline completed successfully on ${env.BRANCH_NAME}"
+            echo "Dev pipeline completed successfully"
         }
-
         failure {
-            echo "Pipeline failed on ${env.BRANCH_NAME}"
+            echo "Dev pipeline failed"
         }
-
         always {
-            sh '''
-                echo "DEBUG"
-                echo "Branch: $BRANCH_NAME"
-                git branch -a || true
-                git log --oneline -5 || true
-            '''
+            cleanWs()
         }
     }
 }
