@@ -55,8 +55,8 @@ pipeline {
         stage('Deploy DEV (running as a container)') {
     steps {
         sh '''
-            docker compose -f docker-compose.dev.yml down || true
-            docker compose -f docker-compose.dev.yml up -d
+            docker-compose -f docker-compose.dev.yml down || true
+docker-compose -f docker-compose.dev.yml up -d
         '''
     }
 }
