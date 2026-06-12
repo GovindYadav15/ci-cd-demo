@@ -24,7 +24,7 @@ pipeline {
             steps {
                 sh '''
                     docker rm -f ci-cd-demo-prod || true
-                    docker run -d --name ci-cd-demo-prod -p 4173:3000 ${IMAGE_NAME}:${TAG}
+                    docker run -d --name ci-cd-demo-prod -p 4175:3000 ${IMAGE_NAME}:${TAG}
                 '''
             }
         }
